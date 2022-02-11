@@ -3,6 +3,7 @@ const path = require('path')
 const exphbs = require('express-handlebars');
 const request = require('request');
 const MiniSearch = require('minisearch');
+const res = require('express/lib/response');
 
 const app = express();
 const port = 3002;
@@ -22,7 +23,9 @@ app.get('/tarkov', (req, res) => {
   res.render('index', {title: 'Tarkov Handbook (Web)', root_path: 'tarkov'})
 })
 
-app.post('/tarkov/getItems', (req, res) => {
+// #region ITEM SEARCH
+
+app.post('/tarkov/itemSearch', (req, res) => {
   let val = req.body.value;
   let results = db.search(val)
   condensedResults = results.slice(0, 4);
@@ -37,14 +40,25 @@ app.post('/tarkov/getItems', (req, res) => {
   }
 
   res.send(condensedResults)
-
-  // res.render('index', {title: 'Tarkov Handbook (Web)', root_path: 'tarkov'})
 })
+
+// #endregion
+
+// #region QUEST SEARCH
+app.post('/tarkov/questSearch', (req, res) => {
+  let val = req.body.value;
+  let results = questDB.search(val)
+  condensedResults = results.slice(0, 4)
+
+  let questResults = getQuests(condensedResults, {});
+
+  res.send(questResults);
+})
+// #endregion
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 })
-
 
 
 // #region DATA INITIALIZATION
@@ -364,4 +378,53 @@ async function updateData() {
     craftItems.push(craftItem)
   }
 };
+// #endregion
+
+// #region FUNCTIONS
+function getQuests(quests, options) {
+  let allQuests = [];
+  for (let i in quests) {
+    let traderValid = true;
+    if ('trader' in options) {
+      if (quests[i].giver != options.trader) {
+        traderValid = false
+      }
+    }
+
+    if (traderValid) {
+      allQuests.push(quests[i])
+    }
+  }
+  
+  sortQuests(allQuests)
+
+  return([allQuests, itemsDictionary])
+}
+
+function iterateThroughQuest(id) {
+  questPathList.push(id);
+
+  if (id in questPath) {
+    if (questPath[id].length > 0) {
+      for (let i in questPath[id]) {
+        iterateThroughQuest(questPath[id][i])
+      }
+    }
+  }
+}
+
+const sortQuests = (arr = []) => {
+  const assignValue = val => {
+     if(val === null){
+        return Infinity;
+     }
+     else{
+        return val;
+     };
+  };
+  const sorter = (a, b) => {
+     return assignValue(a.require.level) - assignValue(b.require.level);
+  };
+  arr.sort(sorter);
+}
 // #endregion
