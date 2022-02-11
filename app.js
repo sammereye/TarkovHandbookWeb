@@ -3,7 +3,6 @@ const path = require('path')
 const exphbs = require('express-handlebars');
 const request = require('request');
 const MiniSearch = require('minisearch');
-const res = require('express/lib/response');
 
 const app = express();
 const port = 3002;
@@ -51,6 +50,22 @@ app.post('/tarkov/questSearch', (req, res) => {
   condensedResults = results.slice(0, 4)
 
   let questResults = getQuests(condensedResults, {});
+
+  res.send(questResults);
+})
+// #endregion
+
+// #region GET ITEM DICTIONARY
+app.post('/tarkov/getItemDictionary', (req, res) => {
+  res.send(itemsDictionary);
+})
+// #endregion
+
+// #region GET QUESTS
+app.post('/tarkov/getQuests', (req, res) => {
+  let trader = req.body.trader;
+
+  let questResults = getQuests(quests, {'trader': trader});
 
   res.send(questResults);
 })
@@ -398,7 +413,7 @@ function getQuests(quests, options) {
   
   sortQuests(allQuests)
 
-  return([allQuests, itemsDictionary])
+  return([allQuests])
 }
 
 function iterateThroughQuest(id) {

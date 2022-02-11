@@ -5,11 +5,19 @@ let activeTab = 'items';
 let moduleLevels = {};
 let traders = ['Prapor', 'Therapist', 'Skier', 'Peacekeeper', 'Mechanic', 'Ragman', 'Jaegar', 'Fence']
 let locations = ['Factory', 'Customs', 'Woods', 'Shoreline', 'Interchange', 'Labs', 'Reserve' , 'Lighthouse']
+let itemsDictionary = {};
 // #endregion
 
 $(document).ready(() => {
   // #region INITIALIZATION
   $('.search-input').focus()
+  $.ajax({
+    method: "POST",
+    url: "getItemDictionary"
+  })
+  .done(function( data ) {
+    itemsDictionary = data;
+  })
   // #endregion
 
   // #region TABS (NAVIGATION)
@@ -63,6 +71,142 @@ $(document).ready(() => {
       // ipcRenderer.send('getHideout', {id: subtabId})
     } else if ($(e.currentTarget).parent().hasClass('quest-subtab-container'))  { // If a subtab that is under the quest section is clicked
       // ipcRenderer.send('getQuests', {trader: subtabId, level: $('.level-input').val()})
+      $.ajax({
+        method: "POST",
+        url: "getQuests",
+        data: { trader: subtabId }
+      })
+      .done(function( data ) {
+        $('.search-results-container').css('display', 'none')
+        $('.search-results-container').empty()
+
+        if (data[0].length > 0) {
+          $('.no-results').remove();
+          $('.search-results-container').append(
+            $('<div/>', {
+              class: 'quest-header'
+            }).append(
+              $('<div/>', {class: 'quest-trader', text: 'Trader'})
+            ).append(
+              $('<div/>', {class: 'quest-name', text: 'Quest Name'})
+            ).append(
+              $('<div/>', {class: 'quest-tasks', text: 'Tasks'})
+            ).append(
+              $('<div/>', {class: 'quest-expand'})
+            )
+          )
+
+          let quests = data[0];
+          let itemDictionary = itemsDictionary;
+
+          for (let i in quests) {
+            let objectives = [];
+            for (let j in quests[i].objectives) {
+              let task = '<div class="task-line-container"><div class="task-dash">-</div>';
+              let type = quests[i].objectives[j].type;
+              let number = quests[i].objectives[j].number;
+              let target = quests[i].objectives[j].target;
+              let location = quests[i].objectives[j].location;
+
+              if (type == 'reputation') {
+                type = 'reach level';
+                target = 'on ' + traders[target]
+              }
+
+              if (type == 'skill') {
+                type = 'achieve level';
+              }
+
+              if (type == 'key') {
+                type = 'requires';
+              }
+
+              if (type == 'find') {
+                type = 'find in raid';
+              }
+
+              if (['kill', 'collect', 'find in raid', 'pickup', 'place', 'mark', 'reach level', 'requires', 'locate', 'build', 'achieve level'].includes(type)) {
+                task += `${capitalizeFirstLetter(type)}`;
+              }
+
+              if (!(['mark', 'pickup', 'warning', 'locate', 'build'].includes(type))) {
+                if (['place', 'requires'].includes(type)) {
+                  if (number > 1) {
+                    task += ` ${number}`
+                  } 
+                } else {
+                  task += ` ${number}`
+                }
+              }
+
+              if (Array.isArray(target)) {
+                for (let k in target) {
+                  if (target[k] in itemDictionary) {
+                    target[k] = itemDictionary[target[k]].name
+                  }
+                }
+                target = target.join(', ')
+              } else {
+                if (target in itemDictionary) {
+                  target = itemDictionary[target].name
+                }
+              }
+              
+              task += ` ${target}`
+
+              if (location > -1 && type != 'requires') {
+                task += ` on ${locations[location]}`
+              }
+
+              if ('with' in quests[i].objectives[j] && quests[i].objectives[j].type != 'build') {
+                task += ` (${quests[i].objectives[j].with.join(', ')})`
+              }
+
+              task += '</div>'
+              objectives.push(task)
+            }
+
+      
+
+            $('.search-results-container').append(
+              $('<div/>', {
+                class: 'quest-row',
+                'data-wiki': quests[i].wiki,
+                'data-id': quests[i].id
+              }).append(
+                $('<div/>', {class: 'quest-trader', text: traders[quests[i].giver]})
+              ).append(
+                $('<div/>', {class: 'quest-name', text: quests[i].locales.en})
+              ).append(
+                $('<div/>', {class: 'quest-tasks', html: objectives.join('')})
+              ).append(
+                $('<div/>', {class: 'quest-expand'}).append(
+                  $('<div/>', {class: 'quest-expand-box'}).append(
+                    $('<svg/>', {xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 320 512", height: '20', width: '20'}).append(
+                      $('<path/>', {fill: "#b9b8bd", d: "M151.5 347.8L3.5 201c-4.7-4.7-4.7-12.3 0-17l19.8-19.8c4.7-4.7 12.3-4.7 17 0L160 282.7l119.7-118.5c4.7-4.7 12.3-4.7 17 0l19.8 19.8c4.7 4.7 4.7 12.3 0 17l-148 146.8c-4.7 4.7-12.3 4.7-17 0z"})
+                    )
+                  )
+                )
+              )
+            )
+
+            $('.search-results-container').append(
+              $('<div/>', {
+                class: 'quest-info-container'
+              })
+            )
+          }
+        } else {
+          $('.search-results-container').empty();
+          $('.search-results-container').append(
+            $('<div/>', {class: 'no-results', text: 'No results found.'})
+          )
+        }
+
+        $('.search-results-container').css('display', 'flex');
+        $('.search-results-container').html($('.search-results-container').html());
+        $('.search-results-container').scrollTop(0)
+      })
     } else if ($(e.currentTarget).parent().hasClass('maps-subtab-container')) {
       $(e.currentTarget).parent().next().next().empty()
       $(e.currentTarget).parent().next().next().append(
@@ -659,7 +803,7 @@ $(document).ready(() => {
             )
 
             let quests = data[0];
-            let itemDictionary = data[1];
+            let itemDictionary = itemsDictionary;
 
             for (let i in quests) {
               let objectives = [];
