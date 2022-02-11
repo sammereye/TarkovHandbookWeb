@@ -12,150 +12,6 @@ $(document).ready(() => {
   $('.search-input').focus()
   // #endregion
 
-  // #region ITEMS
-  // ipcRenderer.on('itemResults', (e, data) => {
-  //   $('.search-results-container').css('display', 'none');
-  //   $('.search-results-container').empty();
-
-  //   if (data.length > 0) {
-  //     $('.no-results').remove();
-  //     $('.search-results-container').append(
-  //       $('<div/>', {
-  //         class: 'search-header'
-  //       }).append(
-  //         $('<div/>', {
-  //           class: 'name-container',
-  //           text: 'Item Name'
-  //         })
-  //       ).append(
-  //         $('<div/>', {
-  //           class: 'item-requirements',
-  //           text: 'Requirements'
-  //         })
-  //       ).append(
-  //         $('<div/>', {
-  //           class: 'average',
-  //           html: '<div>Average</div><div class="fee-title">(After Fee)</div>'
-  //         })
-  //       ).append(
-  //         $('<div/>', {
-  //           class: 'trader',
-  //           text: 'Trader'
-  //         })
-  //       )
-  //     )
-  
-  //     for (let i in data) {
-  //       let nameSecondaryElement = 
-  //         $('<div/>', {class: 'name-secondary'}).append(
-  //           $('<div/>', {class: 'full-name', text: `(${data[i].name})`})
-  //         )
-
-  //         let requirementsElement = $('<div/>', {class: 'item-requirements'})
-  
-  //       if ('quests' in data[i]) {
-  //         for (let j in data[i].quests) {
-  //           let quest = data[i].quests[j];
-  //           requirementsElement.append(
-  //             $('<div/>', {class: 'name-quests'}).append(
-  //               $('<div/>', {
-  //                 class: 'in-raid-quest',
-  //                 text: quest.title
-  //               })
-  //             ).append (
-  //               $('<embed/>', {
-  //                 'height': '15',
-  //                 'width': '15',
-  //                 'class': 'in-raid-icon',
-  //                 'src': 'images/check-circle.svg'
-  //               })
-  //             ).append(
-  //               $('<div/>', {
-  //                 class: 'in-raid-amount',
-  //                 text: quest.amount
-  //               })
-  //             )
-  //           )
-  //         }
-  //       }
-  
-  //       if ('hideout' in data[i]) {
-  //         for (let j in data[i].hideout) {
-  //           let hideout = data[i].hideout[j]
-  //           requirementsElement.append(
-  //             $('<div/>', {class: 'name-hideout'}).append(
-  //               $('<div/>', {
-  //                 class: 'hideout-title',
-  //                 text: `${hideout.module} L${hideout.level}`
-  //               })
-  //             ).append (
-  //               $('<embed/>', {
-  //                 'height': '15',
-  //                 'width': '15',
-  //                 'class': 'hideout-icon',
-  //                 'src': 'images/hashtag.svg'
-  //               })
-  //             ).append(
-  //               $('<div/>', {
-  //                 class: 'hideout-amount',
-  //                 text: hideout.quantity
-  //               })
-  //             )
-  //           )
-  //         }
-  //       }
-  
-  //       let nameElement = 
-  //         $('<div/>', {class: 'name-container'}).append(
-  //           $('<div/>', {class: 'short-name', text: data[i].shortName})
-  //         ).append(
-  //           nameSecondaryElement
-  //         )
-  
-  //       let traderPrice = -1;
-  
-  //       for (let j in data[i].traderPrices) {
-  //         if (data[i].traderPrices[j].price > traderPrice) {
-  //           traderPrice = data[i].traderPrices[j].price
-  //         }
-  //       }
-  
-  //       let basePrice = data[i].basePrice;
-  //       let avgPrice = data[i].avg24hPrice;
-  
-  //       let fee = Math.round((basePrice * 0.09 * Math.pow(4, Math.pow(Math.log10(basePrice / avgPrice), (avgPrice < basePrice ? 1.08 : 1))) + avgPrice * Math.pow(4, Math.pow(Math.log10(avgPrice / basePrice), (basePrice <= avgPrice ? 1.08 : 1))) * 0.05));
-  //       let priceAfterFee = avgPrice - fee;
-  
-  //       $('.search-results-container').append(
-  //         $('<div/>', {
-  //           class: 'search-row'
-  //         }).append(
-  //           nameElement
-  //         ).append(
-  //           requirementsElement
-  //         ).append(
-  //           $('<div/>', {
-  //             class: 'average',
-  //             html: `₽${avgPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}<span class="fee-price">₽(${priceAfterFee.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")})</span>`
-  //           })
-  //         ).append(
-  //           $('<div/>', {
-  //             class: 'trader',
-  //             text: `₽${traderPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`
-  //           })
-  //         )
-  //       )
-  //     }
-  //   } else {
-  //     $('.search-results-container').empty();
-  //     $('.search-results-container').append(
-  //       $('<div/>', {class: 'no-results', text: 'No results found.'})
-  //     )
-  //   }
-
-  //   $('.search-results-container').css('display', 'flex');
-  //   $('.search-results-container').scrollTop(0)
-  // });
   // #endregion
 
   // #region TABS (NAVIGATION)
@@ -628,9 +484,155 @@ $(document).ready(() => {
 
     if (val.trim() != '') {
       if (activeTab == 'items') {
+        $.ajax({
+          method: "POST",
+          url: "getItems",
+          data: { value: val.trim() }
+        })
+        .done(function( data ) {
+
+          $('.search-results-container').css('display', 'none');
+          $('.search-results-container').empty();
+
+          if (data.length > 0) {
+            $('.no-results').remove();
+            $('.search-results-container').append(
+              $('<div/>', {
+                class: 'search-header'
+              }).append(
+                $('<div/>', {
+                  class: 'name-container',
+                  text: 'Item Name'
+                })
+              ).append(
+                $('<div/>', {
+                  class: 'item-requirements',
+                  text: 'Requirements'
+                })
+              ).append(
+                $('<div/>', {
+                  class: 'average',
+                  html: '<div>Average</div><div class="fee-title">(After Fee)</div>'
+                })
+              ).append(
+                $('<div/>', {
+                  class: 'trader',
+                  text: 'Trader'
+                })
+              )
+            )
         
+            for (let i in data) {
+              let nameSecondaryElement = 
+                $('<div/>', {class: 'name-secondary'}).append(
+                  $('<div/>', {class: 'full-name', text: `(${data[i].name})`})
+                )
 
+                let requirementsElement = $('<div/>', {class: 'item-requirements'})
+        
+              if ('quests' in data[i]) {
+                for (let j in data[i].quests) {
+                  let quest = data[i].quests[j];
+                  requirementsElement.append(
+                    $('<div/>', {class: 'name-quests'}).append(
+                      $('<div/>', {
+                        class: 'in-raid-quest',
+                        text: quest.title
+                      })
+                    ).append (
+                      $('<embed/>', {
+                        'height': '15',
+                        'width': '15',
+                        'class': 'in-raid-icon',
+                        'src': 'images/check-circle.svg'
+                      })
+                    ).append(
+                      $('<div/>', {
+                        class: 'in-raid-amount',
+                        text: quest.amount
+                      })
+                    )
+                  )
+                }
+              }
+        
+              if ('hideout' in data[i]) {
+                for (let j in data[i].hideout) {
+                  let hideout = data[i].hideout[j]
+                  requirementsElement.append(
+                    $('<div/>', {class: 'name-hideout'}).append(
+                      $('<div/>', {
+                        class: 'hideout-title',
+                        text: `${hideout.module} L${hideout.level}`
+                      })
+                    ).append (
+                      $('<embed/>', {
+                        'height': '15',
+                        'width': '15',
+                        'class': 'hideout-icon',
+                        'src': 'images/hashtag.svg'
+                      })
+                    ).append(
+                      $('<div/>', {
+                        class: 'hideout-amount',
+                        text: hideout.quantity
+                      })
+                    )
+                  )
+                }
+              }
+        
+              let nameElement = 
+                $('<div/>', {class: 'name-container'}).append(
+                  $('<div/>', {class: 'short-name', text: data[i].shortName})
+                ).append(
+                  nameSecondaryElement
+                )
+        
+              let traderPrice = -1;
+        
+              for (let j in data[i].traderPrices) {
+                if (data[i].traderPrices[j].price > traderPrice) {
+                  traderPrice = data[i].traderPrices[j].price
+                }
+              }
+        
+              let basePrice = data[i].basePrice;
+              let avgPrice = data[i].avg24hPrice;
+        
+              let fee = Math.round((basePrice * 0.09 * Math.pow(4, Math.pow(Math.log10(basePrice / avgPrice), (avgPrice < basePrice ? 1.08 : 1))) + avgPrice * Math.pow(4, Math.pow(Math.log10(avgPrice / basePrice), (basePrice <= avgPrice ? 1.08 : 1))) * 0.05));
+              let priceAfterFee = avgPrice - fee;
+        
+              $('.search-results-container').append(
+                $('<div/>', {
+                  class: 'search-row'
+                }).append(
+                  nameElement
+                ).append(
+                  requirementsElement
+                ).append(
+                  $('<div/>', {
+                    class: 'average',
+                    html: `₽${avgPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}<span class="fee-price">₽(${priceAfterFee.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")})</span>`
+                  })
+                ).append(
+                  $('<div/>', {
+                    class: 'trader',
+                    text: `₽${traderPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`
+                  })
+                )
+              )
+            }
+          } else {
+            $('.search-results-container').empty();
+            $('.search-results-container').append(
+              $('<div/>', {class: 'no-results', text: 'No results found.'})
+            )
+          }
 
+          $('.search-results-container').css('display', 'flex');
+          $('.search-results-container').scrollTop(0)
+        });
 
         // ipcRenderer.send('itemSearch', val);
       } else if (activeTab == 'quests') {
