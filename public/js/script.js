@@ -68,6 +68,168 @@ $(document).ready(() => {
 
     // If a subtab that is under the hideout section is clicked
     if ($(e.currentTarget).parent().hasClass('hideout-subtab-container'))  {
+      $.ajax({
+        method: "POST",
+        url: "getHideout",
+        data: { id: subtabId }
+      })
+      .done(function( data ) {
+        if (subtabId == 'crafts') {
+          $('.search-results-container').css('display', 'none');
+          $('.search-results-container').empty();
+
+          $('.search-results-container').append(
+            $('<div/>', {
+              class: 'craft-header'
+            }).append(
+              $('<div/>', {class: 'craft-input', text: 'Input'})
+            ).append(
+              $('<div/>', {class: 'craft-output', text: 'Output'})
+            ).append(
+              $('<div/>', {class: 'craft-profit', text: 'Profit'})
+            )
+          )
+
+          let craftList = [];
+          let craftItems = data;
+
+          for (let i in craftItems) {
+            let noPrice = false;
+            let inputString = '<div>';
+
+            let inputTotal = 0;
+            for (let j in craftItems[i].input) {
+              let totalPrice = craftItems[i].input[j].amount * craftItems[i].input[j].price;
+              inputString += `<div>${craftItems[i].input[j].amount} x ${craftItems[i].input[j].name} <span class="craft-price">(₽${totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")})</span></div>`
+              inputTotal += totalPrice
+
+              if (craftItems[i].input[j].price == 0) {
+                noPrice = true;
+              }
+            }
+
+            inputString += '</div>'
+
+            let outputTotal = craftItems[i].output.amount * craftItems[i].output.price;
+
+            if (craftItems[i].output.price == 0) {
+              noPrice = true;
+            }
+
+            let profit = outputTotal - inputTotal;
+            let profitPerHour = (profit / (craftItems[i].output.duration / 60 / 60))
+
+            craftList.push({
+              input: inputString,
+              output: `${craftItems[i].output.amount} x ${craftItems[i].output.name} <span class="craft-price">(₽${outputTotal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")})</span>`,
+              profit: noPrice ? 0 : Math.round(profit),
+              profitPerHour: noPrice ? 0 : Math.round(profitPerHour),
+            })
+          }
+
+          craftList.sort((a,b) => b.profit - a.profit)
+
+          if (craftList.length == 0) {
+            $('.search-results-container').empty();
+            $('.search-results-container').append(
+              $('<div/>', {class: 'no-results', text: 'No crafts available, upgrade your hideout to view crafts or disable "Crafts dependent on hideout" in the settings.'})
+            )
+          } else {
+            for (let i in craftList) {
+              $('.search-results-container').append(
+                $('<div/>', {
+                  class: 'craft-row'
+                }).append(
+                  $('<div/>', {class: 'craft-input', html: craftList[i].input})
+                ).append(
+                  $('<div/>', {class: 'craft-output', html: craftList[i].output})
+                ).append(
+                  $('<div/>', {class: 'craft-profit', html: `<div>₽${craftList[i].profit.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</div><div class="craft-profit-hour">(₽${craftList[i].profitPerHour.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}/h)</div>`})
+                )
+              )
+            }
+          }
+
+          $('.search-results-container').css('display', 'flex');
+          $('.search-results-container').html($('.search-results-container').html());
+          $('.search-results-container').scrollTop(0)
+        } else if (subtabId == 'stations') {
+          $('.search-results-container').css('display', 'none');
+          $('.search-results-container').empty();
+
+          $('.search-results-container').append(
+            $('<div/>', {
+              class: 'hideout-header'
+            }).append(
+              $('<div/>', {class: 'hideout-name', html: '<div>Station</div>'})
+            ).append(
+              $('<div/>', {class: 'hideout-requirements', text: 'Requirements'})
+            ).append(
+              $('<div/>', {class: 'hideout-expand'})
+            )
+          )
+
+          let stations = data[0].stations;
+          let modules = data[0].modules;
+          let itemDictionary = itemsDictionary;
+
+          for (let i in stations) {
+            $('.search-results-container').append(
+              $('<div/>', {
+                class: 'hideout-row',
+                id: `hideout-${stations[i].id}`
+              }).append(
+                $('<div/>', {class: 'hideout-name', html: `<div>${stations[i].locales.en}</div>`})
+              ).append(
+                $('<div/>', {class: 'hideout-requirements'})
+              ).append(
+                $('<div/>', {class: 'hideout-expand'}).append(
+                  $('<div/>', {class: 'hideout-expand-box'}).append(
+                    $('<svg/>', {xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 320 512", height: '20', width: '20'}).append(
+                      $('<path/>', {fill: "#b9b8bd", d: "M151.5 347.8L3.5 201c-4.7-4.7-4.7-12.3 0-17l19.8-19.8c4.7-4.7 12.3-4.7 17 0L160 282.7l119.7-118.5c4.7-4.7 12.3-4.7 17 0l19.8 19.8c4.7 4.7 4.7 12.3 0 17l-148 146.8c-4.7 4.7-12.3 4.7-17 0z"})
+                    )
+                  )
+                )
+              )
+            )
+          }
+
+          for (let i in modules) {
+            if (!(modules[i].stationId in moduleLevels)) {
+              moduleLevels[modules[i].stationId] = {};
+            }
+
+            moduleLevels[modules[i].stationId][modules[i].level] = modules[i].require
+          }
+
+          modules = modules.reverse();
+          for (let i in modules) {
+            let requirements = modules[i].require;
+            let level = modules[i].level;
+            let station = modules[i].stationId;
+
+            let requirementsString = getRequirementsString(requirements, itemDictionary, traders);
+
+            (
+              $('<div/>', {
+                class: `hideout-row hideout-station-${station} module-row hidden`,
+                id: `module-${modules[i].id}`
+              }).append(
+                $('<div/>', {class: 'hideout-name', html: `<span class="hideout-dash">–</span>${modules[i].module} Level ${level}`})
+              ).append(
+                $('<div/>', {class: 'hideout-requirements', html: requirementsString})
+              ).append(
+                $('<div/>', {class: 'hideout-expand'})
+              )
+            ).insertAfter(`#hideout-${station}`);
+          }
+
+          $('.search-results-container').css('display', 'flex');
+          $('.search-results-container').html($('.search-results-container').html());
+          $('.search-results-container').scrollTop(0)
+        }
+      })
+
       // ipcRenderer.send('getHideout', {id: subtabId})
     } else if ($(e.currentTarget).parent().hasClass('quest-subtab-container'))  { // If a subtab that is under the quest section is clicked
       // ipcRenderer.send('getQuests', {trader: subtabId, level: $('.level-input').val()})
@@ -441,114 +603,6 @@ $(document).ready(() => {
     $(`.hideout-station-${stationId}`).toggleClass('hidden');
   });
 
-  // ipcRenderer.on('stationResults', (e, data) => {
-  //   $('.search-results-container').css('display', 'none');
-  //   $('.search-results-container').empty();
-
-  //   $('.search-results-container').append(
-  //     $('<div/>', {
-  //       class: 'hideout-header'
-  //     }).append(
-  //       $('<div/>', {class: 'hideout-name', html: '<div>Station</div><div class="hideout-level-header">Current Level</div>'})
-  //     ).append(
-  //       $('<div/>', {class: 'hideout-requirements', text: 'Requirements'})
-  //     ).append(
-  //       $('<div/>', {class: 'hideout-expand'})
-  //     )
-  //   )
-
-  //   let stations = data[0].stations;
-  //   let modules = data[0].modules;
-  //   let itemDictionary = data[1];
-  //   let progress = data[2];
-
-  //   for (let i in stations) {
-  //     $('.search-results-container').append(
-  //       $('<div/>', {
-  //         class: 'hideout-row',
-  //         id: `hideout-${stations[i].id}`
-  //       }).append(
-  //         $('<div/>', {class: 'hideout-name', html: `<div>${stations[i].locales.en}</div>`})
-  //       ).append(
-  //         $('<div/>', {class: 'hideout-requirements'})
-  //       ).append(
-  //         $('<div/>', {class: 'hideout-expand'}).append(
-  //           $('<div/>', {class: 'hideout-expand-box'}).append(
-  //             $('<svg/>', {xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 320 512", height: '20', width: '20'}).append(
-  //               $('<path/>', {fill: "#b9b8bd", d: "M151.5 347.8L3.5 201c-4.7-4.7-4.7-12.3 0-17l19.8-19.8c4.7-4.7 12.3-4.7 17 0L160 282.7l119.7-118.5c4.7-4.7 12.3-4.7 17 0l19.8 19.8c4.7 4.7 4.7 12.3 0 17l-148 146.8c-4.7 4.7-12.3 4.7-17 0z"})
-  //             )
-  //           )
-  //         )
-  //       )
-  //     )
-  //   }
-
-  //   for (let i in modules) {
-  //     if (!(modules[i].stationId in moduleLevels)) {
-  //       moduleLevels[modules[i].stationId] = {};
-  //     }
-
-  //     moduleLevels[modules[i].stationId][modules[i].level] = modules[i].require
-  //   }
-
-  //   // Insert module levels
-  //   for (let i in modules) {
-  //     let level = 0;
-  //     let stationId = modules[i].stationId;
-
-  //     if ($(`#hideout-${stationId}`).children().first().children().length == 1) {
-  //       $(`#hideout-${stationId}`).children().first().html($(`#hideout-${stationId}`).children().first().html() + `<div class="hideout-level-tag${progress[stationId] == level ? '  hideout-level-active' : ''}">0</div>`);
-  //     };
-
-  //     if (level == progress[stationId]) {
-  //       if ((level + 1) in moduleLevels[stationId]) {
-  //         let requirementsString = getRequirementsString(moduleLevels[stationId][(level + 1)], itemDictionary, traders);
-  //         $(`#hideout-${stationId}`).children().eq(1).html(requirementsString);
-  //       } else {
-  //         $(`#hideout-${stationId}`).children().eq(1).html('<div>Max Level</div>')
-  //       }
-  //     }
-
-  //     level = modules[i].level
-
-  //     if (level == progress[stationId]) {
-  //       if ((level + 1) in moduleLevels[stationId]) {
-  //         let requirementsString = getRequirementsString(moduleLevels[stationId][(level + 1)], itemDictionary, traders)
-
-  //         $(`#hideout-${stationId}`).children().eq(1).html(requirementsString)
-  //       } else {
-  //         $(`#hideout-${stationId}`).children().eq(1).html('<div>Max Level</div>')
-  //       }
-  //     }
-  //   }
-
-
-  //   modules = modules.reverse();
-  //   for (let i in modules) {
-  //     let requirements = modules[i].require;
-  //     let level = modules[i].level;
-  //     let station = modules[i].stationId;
-
-  //     let requirementsString = getRequirementsString(requirements, itemDictionary, traders);
-
-  //     (
-  //       $('<div/>', {
-  //         class: `hideout-row hideout-station-${station} module-row hidden`,
-  //         id: `module-${modules[i].id}`
-  //       }).append(
-  //         $('<div/>', {class: 'hideout-name', html: `<span class="hideout-dash">–</span>${modules[i].module} Level ${level}`})
-  //       ).append(
-  //         $('<div/>', {class: 'hideout-requirements', html: requirementsString})
-  //       ).append(
-  //         $('<div/>', {class: 'hideout-expand'})
-  //       )
-  //     ).insertAfter(`#hideout-${station}`);
-  //   }
-
-  //   $('.search-results-container').css('display', 'flex');
-  //   $('.search-results-container').html($('.search-results-container').html());
-  //   $('.search-results-container').scrollTop(0)
-  // });
 
   // ipcRenderer.on('stationLevelResults', (e, data) => {
   //   let itemDictionary = data[0]

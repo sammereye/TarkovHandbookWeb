@@ -23,7 +23,6 @@ app.get('/tarkov', (req, res) => {
 })
 
 // #region ITEM SEARCH
-
 app.post('/tarkov/itemSearch', (req, res) => {
   let val = req.body.value;
   let results = db.search(val)
@@ -40,7 +39,6 @@ app.post('/tarkov/itemSearch', (req, res) => {
 
   res.send(condensedResults)
 })
-
 // #endregion
 
 // #region QUEST SEARCH
@@ -68,6 +66,16 @@ app.post('/tarkov/getQuests', (req, res) => {
   let questResults = getQuests(quests, {'trader': trader});
 
   res.send(questResults);
+})
+// #endregion
+
+// #region GET HIDEOUT
+app.post('/tarkov/getHideout', (req, res) => {
+  if (req.body.id == 'crafts') {
+    res.send(craftItems)
+  } else if (req.body.id == 'stations')  {
+    res.send([hideout])
+  }
 })
 // #endregion
 
